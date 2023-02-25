@@ -21,7 +21,7 @@ Honestly a little overkill for something that'll likely be used one time by anyo
 
 ## Licensing
 
-This project is in no way affiliated to the kanjidic/edict project and if you use it please be sure to adhere to their licensing rules and restrictions.
+This project is in no way affiliated to the kanjidic/edict/jmdict project and if you use it please be sure to adhere to their licensing rules and restrictions.
 
 For documentation on the kanjidic project please go here:
 * https://www.edrdg.org/wiki/index.php/KANJIDIC_Project
