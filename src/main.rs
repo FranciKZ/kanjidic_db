@@ -94,6 +94,8 @@ fn main() {
   // no matter the column used for look up. Something in my likes the normalization despite the fact that it's gonna require to join on pretty much every query
   // in the span of this comment I feel like I've talked myself out of the normalization...or at least want to see if there's a middle ground
   // TODO: is to see if there's a better way to build up this script?? Unsure, need to look up some rust syntax stuff probably cuz this feels wrong(?)
+
+  // TODO Investigate Disel and Quaint as options to programatically generate SQL instead :)
   let mut res = String::new(); 
   write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS kanji (id INT GENERATED ALWAYS AS IDENTITY, literal TEXT, PRIMARY KEY(id));").unwrap();
   write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS codepoint (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
