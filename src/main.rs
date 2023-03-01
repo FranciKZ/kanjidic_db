@@ -40,13 +40,13 @@ struct Radical {
 struct RadValue {
   rad_type: String,
   #[serde(rename = "$value")]
-  id: i64,
+  id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MiscInfo {
-  grade: Option<i64>,
-  stroke_count: Vec<i64>,
+  grade: Option<i32>,
+  stroke_count: Vec<i32>,
   variant: Option<Vec<Variant>>,
 }
 
@@ -89,14 +89,24 @@ fn main() {
   let content: String = fs::read_to_string(file_name).expect("Unable to read file");
   let doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
 
+  // TODO: Evaluate this structure a little more. It's heavy normalized, but not sure if it actually like...needs to be
+  // With ~6000 rows, any db with reasonable hardware and proper indexing should be able to go over a non-normalized version of this rather quickly
+  // no matter the column used for look up. Something in my likes the normalization despite the fact that it's gonna require to join on pretty much every query
+  // in the span of this comment I feel like I've talked myself out of the normalization...or at least want to see if there's a middle ground
+  // TODO: is to see if there's a better way to build up this script?? Unsure, need to look up some rust syntax stuff probably cuz this feels wrong(?)
   let mut res = String::new(); 
-  write!(&mut res, "{}", "DROP TABLE IF EXISTS kanji;\n").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE kanji (").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS kanji (id INT GENERATED ALWAYS AS IDENTITY, literal TEXT, PRIMARY KEY(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS codepoint (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS additional_info (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS meaning (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, meaning TEXT, lang TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS reading (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, reading TEXT, reading_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
+  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS variant (id INT GENERATED ALWAYS AS IDENTITY, additional_info_id INT, variant_type TEXT, code TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(additional_info_id) REFERENCES additional_info(id));").unwrap();
 
-  // for (i, ch) in x.chars().enumerate() {
-  //     write!(&mut res, "{} {}\n", i, ch).unwrap();
-  // }
+  // TODO: Strat is to, obviously, loop over Dictionary, at each entry try not to do much nested stuff, and then generate insert statements from them.
+  // Can I use maps to cut back on nesting? Does rust have maps? 
   
   
-
+  
 }
