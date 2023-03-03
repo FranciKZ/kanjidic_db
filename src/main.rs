@@ -1,9 +1,8 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::{fs};
 use std::fmt::Write;
 use std::io::Write as OtherWrite;
-
-use sea_query::Table;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -91,7 +90,6 @@ fn write_result(result_sql: String) {
   let mut other_content = fs::read_to_string("./template.sql").expect("Unable to read file");
   write!(&mut other_content, "\n{}", result_sql).unwrap();
   // let _doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
-  println!("{}", &other_content);
 
   let mut output = File::create("./create_script.sql").unwrap();
   write!(output, "{}", other_content).unwrap();
@@ -100,7 +98,7 @@ fn write_result(result_sql: String) {
 fn main() {
   let file_name: &str = "./kanjidic2.xml";
   let content: String = fs::read_to_string(file_name).expect("Unable to read file");
-  let _doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
+  let doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
   // TODO: Evaluate this structure a little more. It's heavy normalized, but not sure if it actually like...needs to be
   // With ~6000 rows, any db with reasonable hardware and proper indexing should be able to go over a non-normalized version of this rather quickly
   // no matter the column used for look up. Something in my likes the normalization despite the fact that it's gonna require to join on pretty much every query
@@ -109,12 +107,16 @@ fn main() {
 
   // TODO Investigate Disel and Quaint as options to programatically generate SQL instead :)
   let mut res = String::new(); 
-  write!(&mut res, "{}", "\n hello").unwrap();
+
+  for c in doc.character {
+    writeln!(&mut res, "INSERT INTO kanji_db.kanji (literal) VALUES ('{}');", c.literal).unwrap();
+
+    for cp in c.codepoint.values {
+      writeln!(&mut res, "INSERT INTO kanji_db.codepoint (code_type, code, kanji_id) VALUES('{}', '{}', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", cp.code_type, cp.code, c.literal).unwrap();
+      // codepoints.insert(c.literal.clone(), cp);
+    }
+  }
   // TODO: Strat is to, obviously, loop over Dictionary, at each entry try not to do much nested stuff, and then generate insert statements from them.
   // Can I use maps to cut back on nesting? Does rust have maps? 
-  
-  let table = Table::create()
-    .table("kanji")
-    .if_not_exists();
   write_result(res);
 }
