@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS kanji (id INT GENERATED ALWAYS AS IDENTITY, literal TEXT, PRIMARY KEY(id));
+CREATE TABLE IF NOT EXISTS codepoint (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS additional_info (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS meaning (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, meaning TEXT, lang TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS reading (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, reading TEXT, reading_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));
+CREATE TABLE IF NOT EXISTS variant (id INT GENERATED ALWAYS AS IDENTITY, additional_info_id INT, variant_type TEXT, code TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(additional_info_id) REFERENCES additional_info(id));

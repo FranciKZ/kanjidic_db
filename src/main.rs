@@ -1,15 +1,18 @@
+use std::fs::File;
 use std::{fs};
 use std::fmt::Write;
+use std::io::Write as OtherWrite;
 
+use sea_query::Table;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Dictionary {
-  character: Vec<Character>,
+  character: Vec<Kanji>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Character {
+struct Kanji {
   literal: String,
   codepoint: Codepoint,
   radical: Radical,
@@ -84,11 +87,20 @@ struct Meaning {
   meaning: String,
 }
 
+fn write_result(result_sql: String) {
+  let mut other_content = fs::read_to_string("./template.sql").expect("Unable to read file");
+  write!(&mut other_content, "\n{}", result_sql).unwrap();
+  // let _doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
+  println!("{}", &other_content);
+
+  let mut output = File::create("./create_script.sql").unwrap();
+  write!(output, "{}", other_content).unwrap();
+}
+
 fn main() {
   let file_name: &str = "./kanjidic2.xml";
   let content: String = fs::read_to_string(file_name).expect("Unable to read file");
-  let doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
-
+  let _doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
   // TODO: Evaluate this structure a little more. It's heavy normalized, but not sure if it actually like...needs to be
   // With ~6000 rows, any db with reasonable hardware and proper indexing should be able to go over a non-normalized version of this rather quickly
   // no matter the column used for look up. Something in my likes the normalization despite the fact that it's gonna require to join on pretty much every query
@@ -97,18 +109,12 @@ fn main() {
 
   // TODO Investigate Disel and Quaint as options to programatically generate SQL instead :)
   let mut res = String::new(); 
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS kanji (id INT GENERATED ALWAYS AS IDENTITY, literal TEXT, PRIMARY KEY(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS codepoint (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS additional_info (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, code_type TEXT, code_value TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS radical (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, radical_id TEXT, radical_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS meaning (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, meaning TEXT, lang TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS reading (id INT GENERATED ALWAYS AS IDENTITY, kanji_id INT, reading TEXT, reading_type TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(kanji_id) REFERENCES kanji(id));").unwrap();
-  write!(&mut res, "{}", "CREATE TABLE IF NOT EXISTS variant (id INT GENERATED ALWAYS AS IDENTITY, additional_info_id INT, variant_type TEXT, code TEXT, PRIMARY KEY(id), CONSTRAINT fk_kanji FOREIGN KEY(additional_info_id) REFERENCES additional_info(id));").unwrap();
-
+  write!(&mut res, "{}", "\n hello").unwrap();
   // TODO: Strat is to, obviously, loop over Dictionary, at each entry try not to do much nested stuff, and then generate insert statements from them.
   // Can I use maps to cut back on nesting? Does rust have maps? 
   
-  
-  
+  let table = Table::create()
+    .table("kanji")
+    .if_not_exists();
+  write_result(res);
 }
