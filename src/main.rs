@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::fs::File;
+use std::time::Instant;
 use std::{fs};
 use std::fmt::Write;
 use std::io::Write as OtherWrite;
@@ -86,26 +86,8 @@ struct Meaning {
   meaning: String,
 }
 
-fn write_result(result_sql: String) {
-  let mut other_content = fs::read_to_string("./template.sql").expect("Unable to read file");
-  write!(&mut other_content, "\n{}", result_sql).unwrap();
-  // let _doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
-
-  let mut output = File::create("./create_script.sql").unwrap();
-  write!(output, "{}", other_content).unwrap();
-}
-
-fn main() {
-  let file_name: &str = "./kanjidic2.xml";
-  let content: String = fs::read_to_string(file_name).expect("Unable to read file");
+fn get_result(content: String) -> std::string::String {
   let doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
-  // TODO: Evaluate this structure a little more. It's heavy normalized, but not sure if it actually like...needs to be
-  // With ~6000 rows, any db with reasonable hardware and proper indexing should be able to go over a non-normalized version of this rather quickly
-  // no matter the column used for look up. Something in my likes the normalization despite the fact that it's gonna require to join on pretty much every query
-  // in the span of this comment I feel like I've talked myself out of the normalization...or at least want to see if there's a middle ground
-  // TODO: is to see if there's a better way to build up this script?? Unsure, need to look up some rust syntax stuff probably cuz this feels wrong(?)
-
-  // TODO Investigate Disel and Quaint as options to programatically generate SQL instead :)
   let mut res = String::new(); 
 
   for c in doc.character {
@@ -115,8 +97,60 @@ fn main() {
       writeln!(&mut res, "INSERT INTO kanji_db.codepoint (code_type, code, kanji_id) VALUES('{}', '{}', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", cp.code_type, cp.code, c.literal).unwrap();
       // codepoints.insert(c.literal.clone(), cp);
     }
+
+    for rad in c.radical.rad_value {
+      writeln!(&mut res, "INSERT INTO kanji_db.radical (radical_type, radical_id, kanji_id) VALUES('{}', '{}', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", rad.rad_type, rad.id, c.literal).unwrap();
+    }
+
+    match c.reading_meaning {
+      Some(x) => {
+        for group in x.rm_group {
+          match group.meaning {
+            Some(g) => {
+              for meaning in g {
+                match meaning.m_lang {
+                  Some(lang) => {
+                    writeln!(&mut res, "INSERT INTO kanji_db.meaning (meaning, lang, kanji_id) VALUES('{}', '{}', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", meaning.meaning.replace("'", "''"), lang, c.literal).unwrap();
+                  }
+                  None => {
+                    writeln!(&mut res, "INSERT INTO kanji_db.meaning (meaning, lang, kanji_id) VALUES('{}', NULL, (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", meaning.meaning.replace("'", "''"), c.literal).unwrap();
+                  }
+                }
+              }
+            }
+            None => ()
+          }
+          match group.reading {
+            Some(g) => {
+              for reading in g {
+                writeln!(&mut res, "INSERT INTO kanji_db.reading (reading, reading_type, kanji_id) VALUES('{}', '{}', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", reading.reading.replace("'", "''"), reading.r_type, c.literal).unwrap();
+              }
+            }
+            None => ()
+          }
+        }
+      }
+      None => ()
+    }
   }
-  // TODO: Strat is to, obviously, loop over Dictionary, at each entry try not to do much nested stuff, and then generate insert statements from them.
-  // Can I use maps to cut back on nesting? Does rust have maps? 
-  write_result(res);
+  return res;
+}
+
+fn write_result(result_sql: String) {
+  let mut other_content = fs::read_to_string("./template.sql").expect("Unable to read file");
+  write!(&mut other_content, "\n{}", result_sql).unwrap();
+  let mut output = File::create("./create_script.sql").unwrap();
+  write!(output, "{}", other_content).unwrap();
+}
+
+fn main() {
+  let file_name: &str = "./kanjidic2.xml";
+  let content: String = fs::read_to_string(file_name).expect("Unable to read file");
+  
+  let now = Instant::now();
+
+  write_result(get_result(content));
+  
+  let elapsed_time = now.elapsed();
+  println!("Ran in {} seconds", elapsed_time.as_secs());
 }
