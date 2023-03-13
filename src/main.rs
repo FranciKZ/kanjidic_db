@@ -3,88 +3,9 @@ use std::time::Instant;
 use std::{fs};
 use std::fmt::Write;
 use std::io::Write as OtherWrite;
-use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Dictionary {
-  character: Vec<Kanji>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Kanji {
-  literal: String,
-  codepoint: Codepoint,
-  radical: Radical,
-  misc: MiscInfo,
-  reading_meaning: Option<ReadingMeaning>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Codepoint {
-  #[serde(rename = "cp_value")]
-  values: Vec<CpValue>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CpValue {
-  #[serde(rename = "cp_type")]
-  code_type: String,
-  #[serde(rename = "$value")]
-  code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Radical {
-  rad_value: Vec<RadValue>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RadValue {
-  rad_type: String,
-  #[serde(rename = "$value")]
-  id: i32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct MiscInfo {
-  grade: Option<i32>,
-  stroke_count: Vec<i32>,
-  variant: Option<Vec<Variant>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Variant {
-  var_type: String,
-  #[serde(rename = "$value")]
-  code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ReadingMeaning {
-  #[serde(rename = "rmgroup")]
-  rm_group: Vec<RmGroup>,
-  nanori: Option<Vec<String>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RmGroup {
-  reading: Option<Vec<Reading>>,
-  meaning: Option<Vec<Meaning>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Reading {
-  r_type: String,
-  #[serde(rename = "$value")]
-  reading: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Meaning {
-  m_lang: Option<String>,
-  #[serde(rename = "$value")]
-  meaning: String,
-}
+use dictionary::Dictionary;
+mod dictionary;
 
 fn get_result(content: String) -> std::string::String {
   let doc: Dictionary = serde_xml_rs::from_str(&*content).unwrap();
@@ -128,6 +49,14 @@ fn get_result(content: String) -> std::string::String {
             }
             None => ()
           }
+        }
+        match x.nanori {
+          Some(nanoris) => {
+            for nanori in nanoris {
+              writeln!(&mut res, "INSERT INTO kanji_db.reading (reading, reading_type, kanji_id) VALUES('{}', 'nanori', (SELECT id FROM kanji_db.kanji WHERE literal = '{}'));", nanori, c.literal).unwrap();
+            }
+          }
+          None => ()
         }
       }
       None => ()
