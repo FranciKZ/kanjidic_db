@@ -23,6 +23,13 @@ Currently this will output a large creation script of all kanji with meanings, r
 
 Honestly a little overkill for something that'll likely be used one time by anyone else who uses it, but 🤷🏼‍♂️🤷🏼‍♂️
 
+## Using
+
+1. Clone the repo
+2. Modify code if you want all kanji instead of just jōyō
+3. Run `cargo run`
+4. Use `create_script.sql` to generate your db
+
 ## Licensing
 
 This project is in no way affiliated to the kanjidic/edict/jmdict project and if you use it please be sure to adhere to their licensing rules and restrictions.
